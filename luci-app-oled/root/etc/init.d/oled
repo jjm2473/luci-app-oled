@@ -5,7 +5,7 @@ USE_PROCD=1
 PROG=/usr/bin/oled
 
 get_section() {
-	export -n section="$1"
+	eval "export -n ${2}=\"$1\""
 	return 1
 }
 
@@ -52,16 +52,17 @@ schedule_oled() {
 
 start_service() {
 	local cron="$1"
-	local section
+	local mainsection
 	config_load oled
-	config_foreach get_section oled
+	config_foreach get_section oled mainsection
+	local section=$mainsection
 
-	local enabled ; config_get enabled "$section" enable
+	local enabled ; config_get enabled "$section" enable 0
 	if [[ $enabled -eq 0 ]]; then
 		return 1
 	fi
 
-	[[ -z "$cron" ]] && schedule_oled && {
+	[[ -z "$cron" ]] && schedule_oled "$section" && {
 		echo "skip start, wait for crontab" >&2
 		return 0
 	}

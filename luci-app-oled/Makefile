@@ -8,7 +8,6 @@
 include $(TOPDIR)/rules.mk
 
 LUCI_TITLE:=LuCI support for ssd1306 0.91\' 138x32 display
-LUCI_DEPENDS:=+i2c-tools
 PKG_VERSION:=20230629
 PKG_RELEASE:=1
 
