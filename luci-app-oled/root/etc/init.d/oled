@@ -34,7 +34,7 @@ schedule_oled() {
 		if [[ $fhour -ne $thour || $fmin -ne $tmin ]]; then
 			#crontab daemon
 			[ -n "`tail -c1 /etc/crontabs/root`" ] && echo >> /etc/crontabs/root
-			echo "$tmin $thour * * * /etc/init.d/oled stop cron >/dev/null 2>&1" >> /etc/crontabs/root
+			echo "$tmin $thour * * * /etc/init.d/oled stop >/dev/null 2>&1" >> /etc/crontabs/root
 			echo "$fmin $fhour * * * /etc/init.d/oled start cron >/dev/null 2>&1" >> /etc/crontabs/root
 			local hour=$(date +"%H")
 			local min=$(date +"%M")
