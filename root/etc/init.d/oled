@@ -1,119 +1,96 @@
 #!/bin/sh /etc/rc.common
-START=88
 
+START=88
+USE_PROCD=1
 PROG=/usr/bin/oled
 
-stop() {
-	kill -2 $(pgrep /usr/bin/oled)
-	echo "oled exit..."
+get_section() {
+	export -n section="$1"
+	return 1
 }
 
-start() {
-	enabled=$(uci get oled.@oled[0].enable)
-	if [ $enabled -eq 0 ]; then
-		exit 0
-	fi
+schedule_oled() {
+	local section="$1"
+	local run=1
 
-	autoswitch=$(uci get oled.@oled[0].autoswitch)
-	from=$(uci get oled.@oled[0].from)
-	to=$(uci get oled.@oled[0].to)
+	local autoswitch ; config_get autoswitch "$section" autoswitch
+	local from ; config_get from "$section" from
+	local to ; config_get to "$section" to
 
-	if [ ${autoswitch} -eq 1 ]; then
-		hour=$(date +"%H")
-		min=$(date +"%M")
-		ihour=`expr $hour + 0`
-		imin=`expr $min + 0`
-		now=$(($ihour*60+$imin))
-		if [[ $now -lt $from || $now -gt $to ]]; then
-			stop
-			exit 0
+	sed -i '/ \/etc\/init\.d\/oled /d' /etc/crontabs/root >/dev/null 2>&1
+	if [[ ${autoswitch} -eq 1 ]]; then
+		local fhour=$(($from / 60))
+		local fmin=$(($from % 60))
+		if [[ $fhour -ge 24 ]] ;then
+			fhour=0
+			fmin=0
 		fi
-	fi
-
-	date=$(uci get oled.@oled[0].date)
-	lanip=$(uci get oled.@oled[0].lanip)
-	cputemp=$(uci get oled.@oled[0].cputemp)
-	cpufreq=$(uci get oled.@oled[0].cpufreq)
-	netspeed=$(uci get oled.@oled[0].netspeed)
-	time=$(uci get oled.@oled[0].time)
-	drawline=$(uci get oled.@oled[0].drawline)
-	drawrect=$(uci get oled.@oled[0].drawrect)
-	fillrect=$(uci get oled.@oled[0].fillrect)
-	drawcircle=$(uci get oled.@oled[0].drawcircle)
-	drawroundrect=$(uci get oled.@oled[0].drawroundrect)
-	fillroundrect=$(uci get oled.@oled[0].fillroundrect)
-	drawtriangle=$(uci get oled.@oled[0].drawtriangle)
-	filltriangle=$(uci get oled.@oled[0].filltriangle)
-	displaybitmap=$(uci get oled.@oled[0].displaybitmap)
-	displayinvertnormal=$(uci get oled.@oled[0].displayinvertnormal)
-	drawbitmapeg=$(uci get oled.@oled[0].drawbitmapeg)
-	rotate=$(uci get oled.@oled[0].rotate)
-	scroll=$(uci get oled.@oled[0].scroll)
-	text=$(uci get oled.@oled[0].text)
-	netsource=$(uci get oled.@oled[0].netsource)
-	path=$(uci get oled.@oled[0].path)
-
-	nohup ${PROG} ${date} ${lanip} ${cputemp} ${cpufreq} ${netspeed} ${time} ${drawline} ${drawrect} ${fillrect} ${drawcircle} ${drawroundrect} ${fillroundrect} ${drawtriangle} ${filltriangle} ${displaybitmap} ${displayinvertnormal}  ${drawbitmapeg} ${scroll} "${text}" "${netsource}" "${path}" ${rotate} 1 > /dev/null 2>&1 &
-}
-
-restart() {
-	enabled=$(uci get oled.@oled[0].enable)
-	pgrep -f ${PROG} >/dev/null
-	if [ $? -eq 0 ]; then
-		if [ $enabled -eq 1 ]; then
-			autoswitch=$(uci get oled.@oled[0].autoswitch)
-			from=$(uci get oled.@oled[0].from)
-			to=$(uci get oled.@oled[0].to)
-			if [ ${autoswitch} -eq 1 ]; then
-				hour=$(date +"%H")
-				min=$(date +"%M")
-				ihour=`expr $hour + 0`
-				imin=`expr $min + 0`
-				now=$(($ihour*60+$imin))
-				if [[ $now -lt $from || $now -gt $to ]]; then
-					stop
-					exit 0
-				fi
+		local thour=$(($to / 60))
+		local tmin=$(($to % 60))
+		if [[ $thour -ge 24 ]] ;then
+			thour=0
+			tmin=0
+		fi
+		if [[ $fhour -ne $thour || $fmin -ne $tmin ]]; then
+			#crontab daemon
+			[ -n "`tail -c1 /etc/crontabs/root`" ] && echo >> /etc/crontabs/root
+			echo "$tmin $thour * * * /etc/init.d/oled stop cron >/dev/null 2>&1" >> /etc/crontabs/root
+			echo "$fmin $fhour * * * /etc/init.d/oled start cron >/dev/null 2>&1" >> /etc/crontabs/root
+			local hour=$(date +"%H")
+			local min=$(date +"%M")
+			local ihour=`expr $hour + 0`
+			local imin=`expr $min + 0`
+			local now=$(($ihour*60+$imin))
+			if [[ $now -lt $from || $now -gt $to ]]; then
+				run=0
 			fi
-
-			date=$(uci get oled.@oled[0].date)
-			lanip=$(uci get oled.@oled[0].lanip)
-			cputemp=$(uci get oled.@oled[0].cputemp)
-			cpufreq=$(uci get oled.@oled[0].cpufreq)
-			netspeed=$(uci get oled.@oled[0].netspeed)
-			time=$(uci get oled.@oled[0].time)
-			drawline=$(uci get oled.@oled[0].drawline)
-			drawrect=$(uci get oled.@oled[0].drawrect)
-			fillrect=$(uci get oled.@oled[0].fillrect)
-			drawcircle=$(uci get oled.@oled[0].drawcircle)
-			drawroundrect=$(uci get oled.@oled[0].drawroundrect)
-			fillroundrect=$(uci get oled.@oled[0].fillroundrect)
-			drawtriangle=$(uci get oled.@oled[0].drawtriangle)
-			filltriangle=$(uci get oled.@oled[0].filltriangle)
-			displaybitmap=$(uci get oled.@oled[0].displaybitmap)
-			displayinvertnormal=$(uci get oled.@oled[0].displayinvertnormal)
-			drawbitmapeg=$(uci get oled.@oled[0].drawbitmapeg)
-			rotate=$(uci get oled.@oled[0].rotate)
-			scroll=$(uci get oled.@oled[0].scroll)
-			text=$(uci get oled.@oled[0].text)
-			netsource=$(uci get oled.@oled[0].netsource)
-			path=$(uci get oled.@oled[0].path)
-
-			kill -9 $(pgrep /usr/bin/oled)
-
-			nohup ${PROG} ${date} ${lanip} ${cputemp} ${cpufreq} ${netspeed} ${time} ${drawline} ${drawrect} ${fillrect} ${drawcircle} ${drawroundrect} ${fillroundrect} ${drawtriangle} ${filltriangle} ${displaybitmap} ${displayinvertnormal}  ${drawbitmapeg} ${scroll} "${text}" "${netsource}" "${path}" ${rotate} 0 > /dev/null 2>&1 &
-		else
-			stop
-		fi
-	else
-		if [ $enabled -eq 1 ]; then
-			start
-		else
-			exit 0
 		fi
 	fi
+	/etc/init.d/cron reload
+	return $run
 }
 
-boot() {
-	start
+start_service() {
+	local cron="$1"
+	local section
+	config_load oled
+	config_foreach get_section oled
+
+	local enabled ; config_get enabled "$section" enable
+	if [[ $enabled -eq 0 ]]; then
+		return 1
+	fi
+
+	[[ -z "$cron" ]] && schedule_oled && {
+		echo "skip start, wait for crontab" >&2
+		return 0
+	}
+
+	local date ; config_get date "$section" date
+	local lanip ; config_get lanip "$section" lanip
+	local cputemp ; config_get cputemp "$section" cputemp
+	local cpufreq ; config_get cpufreq "$section" cpufreq
+	local netspeed ; config_get netspeed "$section" netspeed
+	local time ; config_get time "$section" time
+	local drawline ; config_get drawline "$section" drawline
+	local drawrect ; config_get drawrect "$section" drawrect
+	local fillrect ; config_get fillrect "$section" fillrect
+	local drawcircle ; config_get drawcircle "$section" drawcircle
+	local drawroundrect ; config_get drawroundrect "$section" drawroundrect
+	local fillroundrect ; config_get fillroundrect "$section" fillroundrect
+	local drawtriangle ; config_get drawtriangle "$section" drawtriangle
+	local filltriangle ; config_get filltriangle "$section" filltriangle
+	local displaybitmap ; config_get displaybitmap "$section" displaybitmap
+	local displayinvertnormal ; config_get displayinvertnormal "$section" displayinvertnormal
+	local drawbitmapeg ; config_get drawbitmapeg "$section" drawbitmapeg
+	local rotate ; config_get rotate "$section" rotate
+	local scroll ; config_get scroll "$section" scroll
+	local text ; config_get text "$section" text
+	local netsource ; config_get netsource "$section" netsource
+	local path ; config_get path "$section" path
+
+	procd_open_instance
+	procd_set_param command ${PROG} ${date} ${lanip} ${cputemp} ${cpufreq} ${netspeed} ${time} ${drawline} ${drawrect} ${fillrect} ${drawcircle} ${drawroundrect} ${fillroundrect} ${drawtriangle} ${filltriangle} ${displaybitmap} ${displayinvertnormal}  ${drawbitmapeg} ${scroll} "${text}" "${netsource}" "${path}" ${rotate} 1
+	procd_set_param respawn
+	procd_close_instance
 }

@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
     /* Register the Alarm Handler */
     signal(SIGALRM, ALARMhandler);
     signal(SIGINT, BreakDeal);
-    //signal(SIGTERM, BreakDeal);
+    signal(SIGTERM, BreakDeal);
 
     /* Run SDD1306 Initialization Sequence */
     if (needinit==1)
